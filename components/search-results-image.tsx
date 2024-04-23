@@ -94,7 +94,7 @@ export const SearchResultsImageSection: React.FC<
           <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>Search Images</DialogTitle>
-              <DialogDescription className="text-sm">{query}</DialogDescription>
+              {/* <DialogDescription className="text-sm">{query}</DialogDescription> */}
             </DialogHeader>
             <div className="py-4">
               <Carousel

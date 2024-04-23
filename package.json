@@ -24,6 +24,7 @@
     "@tailwindcss/typography": "^0.5.12",
     "ai": "^3.0.14",
     "axios": "^1.6.8",
+    "bun": "^1.1.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "embla-carousel-react": "^8.0.0",

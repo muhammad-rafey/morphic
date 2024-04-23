@@ -76,17 +76,22 @@ export async function researcher(
           // Tavily API requires a minimum of 5 characters in the query
           const filledQuery =
             query.length < 5 ? query + ' '.repeat(5 - query.length) : query
-          let searchResult
+          // let searchResult
+          let shopifyProducts
           try {
-            const products = await shopifyProduct(filledQuery)
+            const { products } = await shopifyProduct(filledQuery)
+            shopifyProducts =
+              products?.edges
+                ?.map((x: any) => x.node)
+                .filter((x: any) => x.onlineStoreUrl?.length) || []
             console.log('P'.repeat(1000))
-            console.log(products)
+            console.log(shopifyProducts)
 
-            searchResult =
-              searchAPI === 'tavily'
-                ? await tavilySearch(filledQuery, max_results, search_depth)
-                : await exaSearch(query)
-            // console.log('*'.repeat(1000))
+            // searchResult =
+            //   searchAPI === 'tavily'
+            //     ? await tavilySearch(filledQuery, max_results, search_depth)
+            //     : await exaSearch(query)
+            console.log('*'.repeat(1000))
             // console.log(searchResult)
           } catch (error) {
             console.error('Search API error:', error)
@@ -100,21 +105,29 @@ export async function researcher(
                 {`An error occurred while searching for "${query}".`}
               </Card>
             )
-            return searchResult
+            return shopifyProducts
           }
 
           uiStream.update(
             <Section title="Images">
               <SearchResultsImageSection
-                images={searchResult.images}
+                // images={searchResult.images}
+                images={shopifyProducts.map((x: any) => x.featuredImage?.url)}
                 // query={searchResult.query}
-                query={''}
+                query={shopifyProducts.map((x: any) => x.title)}
               />
             </Section>
           )
           uiStream.append(
             <Section title="Sources">
-              <SearchResults results={searchResult.results} />
+              <SearchResults
+                results={shopifyProducts.map((x: any) => ({
+                  title: x.title,
+                  content: x.description,
+                  url: x.onlineStoreUrl
+                }))}
+              />
+              {/* <SearchResults results={searchResult.results} /> */}
             </Section>
           )
 
@@ -123,7 +136,7 @@ export async function researcher(
             uiStream.append(answerSection)
           }
 
-          return searchResult
+          return shopifyProducts
         }
       }
     }
@@ -170,45 +183,55 @@ export async function researcher(
   return { result, fullResponse, hasError, toolResponses }
 }
 
-async function tavilySearch(
-  query: string,
-  maxResults: number = 10,
-  searchDepth: 'basic' | 'advanced' = 'basic'
-): Promise<any> {
-  const apiKey = process.env.TAVILY_API_KEY
-  const response = await fetch('https://api.tavily.com/search', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      api_key: apiKey,
-      query,
-      max_results: maxResults < 5 ? 5 : maxResults,
-      search_depth: searchDepth,
-      include_images: true,
-      include_answers: true
-    })
-  })
+// async function tavilySearch(
+//   query: string,
+//   maxResults: number = 10,
+//   searchDepth: 'basic' | 'advanced' = 'basic'
+// ): Promise<any> {
+//   const apiKey = process.env.TAVILY_API_KEY
+//   const response = await fetch('https://api.tavily.com/search', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json'
+//     },
+//     body: JSON.stringify({
+//       api_key: apiKey,
+//       query,
+//       max_results: maxResults < 5 ? 5 : maxResults,
+//       search_depth: searchDepth,
+//       include_images: true,
+//       include_answers: true
+//     })
+//   })
 
-  if (!response.ok) {
-    throw new Error(`Error: ${response.status}`)
-  }
+//   if (!response.ok) {
+//     throw new Error(`Error: ${response.status}`)
+//   }
 
-  const data = await response.json()
-  return data
-}
+//   const data = await response.json()
+//   return data
+// }
 
 async function shopifyProduct(search: string) {
   console.log(search)
-
+  let searchString
+  if (search.length)
+    searchString = `query:"${search
+      .split(' ')
+      .map(x => `title:${x}*`)
+      .join(' OR ')}"`
   const query = `
   {
-    products(first: 10) {
+    products(first: 10, ${searchString} ) {
       edges {
         node {
           id
           title
+          handle
+          onlineStoreUrl
+					featuredImage{
+            url
+          }
           description
           priceRange {
             minVariantPrice {
@@ -221,18 +244,28 @@ async function shopifyProduct(search: string) {
   }
   `
 
-  const products = await fetch(
+  const headers = new Headers()
+  headers.append(
+    'X-Shopify-Access-Token',
+    process.env.SHOPIFY_API_ACCESS_TOKEN || ''
+  )
+  headers.append('Content-Type', 'application/json')
+
+  const response = await fetch(
     `https://${process.env.SHOP_NAME}.myshopify.com/admin/api/2024-04/graphql.json`,
     {
       method: 'POST',
-      headers: {
-        'X-Shopify-Access-Token': process.env.SHOPIFY_API_ACCESS_TOKEN,
-        'Content-Type': 'application/json'
-      },
+      headers: headers,
       body: JSON.stringify({ query })
     }
   )
-  return products
+
+  if (!response.ok) {
+    throw new Error(`Error: ${response.status}`)
+  }
+
+  const { data } = await response.json()
+  return data
 }
 
 async function exaSearch(query: string, maxResults: number = 10): Promise<any> {
