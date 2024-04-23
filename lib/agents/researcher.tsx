@@ -78,10 +78,16 @@ export async function researcher(
             query.length < 5 ? query + ' '.repeat(5 - query.length) : query
           let searchResult
           try {
+            const products = await shopifyProduct(filledQuery)
+            console.log('P'.repeat(1000))
+            console.log(products)
+
             searchResult =
               searchAPI === 'tavily'
                 ? await tavilySearch(filledQuery, max_results, search_depth)
                 : await exaSearch(query)
+            // console.log('*'.repeat(1000))
+            // console.log(searchResult)
           } catch (error) {
             console.error('Search API error:', error)
             hasError = true
@@ -101,7 +107,8 @@ export async function researcher(
             <Section title="Images">
               <SearchResultsImageSection
                 images={searchResult.images}
-                query={searchResult.query}
+                // query={searchResult.query}
+                query={''}
               />
             </Section>
           )
@@ -190,6 +197,42 @@ async function tavilySearch(
 
   const data = await response.json()
   return data
+}
+
+async function shopifyProduct(search: string) {
+  console.log(search)
+
+  const query = `
+  {
+    products(first: 10) {
+      edges {
+        node {
+          id
+          title
+          description
+          priceRange {
+            minVariantPrice {
+              amount
+            }
+          }
+        }
+      }
+    }
+  }
+  `
+
+  const products = await fetch(
+    `https://${process.env.SHOP_NAME}.myshopify.com/admin/api/2024-04/graphql.json`,
+    {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': process.env.SHOPIFY_API_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query })
+    }
+  )
+  return products
 }
 
 async function exaSearch(query: string, maxResults: number = 10): Promise<any> {
