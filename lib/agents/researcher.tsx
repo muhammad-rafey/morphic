@@ -80,6 +80,7 @@ export async function researcher(
           let shopifyProducts
           try {
             const { products } = await shopifyProduct(filledQuery)
+            console.log(products)
             shopifyProducts =
               products?.edges
                 ?.map((x: any) => x.node)
@@ -218,8 +219,9 @@ async function shopifyProduct(search: string) {
   if (search.length)
     searchString = `query:"${search
       .split(' ')
-      .map(x => `title:${x}*`)
+      .map(x => `title:${toSingular(x)}*`)
       .join(' OR ')}"`
+  console.log('query ==>>>>>>', searchString)
   const query = `
   {
     products(first: 10, ${searchString} ) {
@@ -243,6 +245,20 @@ async function shopifyProduct(search: string) {
     }
   }
   `
+
+  function toSingular(word: string) {
+    word = word.toLowerCase()
+    const rules = [
+      { regex: /ies$/, replacement: 'y' },
+      { regex: /s$/, replacement: '' }
+    ]
+    for (let rule of rules) {
+      if (rule.regex.test(word)) {
+        return word.replace(rule.regex, rule.replacement)
+      }
+    }
+    return word
+  }
 
   const headers = new Headers()
   headers.append(
