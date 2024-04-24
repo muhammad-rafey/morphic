@@ -80,7 +80,6 @@ export async function researcher(
           let shopifyProducts
           try {
             const { products } = await shopifyProduct(filledQuery)
-            console.log(products)
             shopifyProducts =
               products?.edges
                 ?.map((x: any) => x.node)
@@ -92,7 +91,6 @@ export async function researcher(
             //   searchAPI === 'tavily'
             //     ? await tavilySearch(filledQuery, max_results, search_depth)
             //     : await exaSearch(query)
-            console.log('*'.repeat(1000))
             // console.log(searchResult)
           } catch (error) {
             console.error('Search API error:', error)
@@ -214,7 +212,6 @@ export async function researcher(
 // }
 
 async function shopifyProduct(search: string) {
-  console.log(search)
   let searchString
   if (search.length)
     searchString = `query:"${search
