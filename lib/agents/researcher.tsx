@@ -37,6 +37,12 @@ export async function researcher(
       <BotMessage content={streamText.value} />
     </Section>
   )
+  const { products: allProducts } = await shopifyProduct('', 250)
+
+  const allShopifyProducts =
+    allProducts?.edges
+      ?.map((x: any) => x.node)
+      .filter((x: any) => x.onlineStoreUrl?.length) || []
 
   const result = await experimental_streamText({
     model: openai.chat(process.env.OPENAI_API_MODEL || 'gpt-4-turbo'),
@@ -46,7 +52,10 @@ export async function researcher(
     If there are any images relevant to your answer, be sure to include them as well.
     Aim to directly address the user's question, augmenting your response with insights gleaned from the search results.
     Whenever quoting or referencing information from a specific URL, always cite the source URL explicitly.
-    Please match the language of the response to the user's language.`,
+    Please match the language of the response to the user's language.
+    
+    I have few products, first check if the user requirements lies with in these products then suggest these products.
+    Products are below: ${allShopifyProducts}`,
     messages,
     tools: {
       search: {
@@ -85,7 +94,9 @@ export async function researcher(
                 ?.map((x: any) => x.node)
                 .filter((x: any) => x.onlineStoreUrl?.length) || []
             console.log('P'.repeat(1000))
-            console.log(shopifyProducts)
+            // console.log(shopifyProducts)
+            console.log(messages)
+            console.log(query)
 
             // searchResult =
             //   searchAPI === 'tavily'
@@ -140,7 +151,6 @@ export async function researcher(
       }
     }
   })
-
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
   for await (const delta of result.fullStream) {
@@ -211,17 +221,20 @@ export async function researcher(
 //   return data
 // }
 
-async function shopifyProduct(search: string) {
-  let searchString
+async function shopifyProduct(search: string, limit: number = 10) {
+  let searchString = 'query:"status:active"'
   if (search.length)
-    searchString = `query:"${search
-      .split(' ')
-      .map(x => `title:${toSingular(x)}*`)
-      .join(' OR ')}"`
+    searchString = `query:"(${search
+      .toLowerCase()
+      ?.replace('tv', 'lcd led')
+      ?.split(' ')
+      ?.map(x => `title:${toSingular(x)}*`)
+      ?.join(' OR ')}) AND status:active"`
+
   console.log('query ==>>>>>>', searchString)
   const query = `
   {
-    products(first: 10, ${searchString} ) {
+    products(first: ${limit}, ${searchString} ) {
       edges {
         node {
           id
@@ -232,7 +245,7 @@ async function shopifyProduct(search: string) {
             url
           }
           description
-          priceRange {
+          priceRangeV2 {
             minVariantPrice {
               amount
             }
