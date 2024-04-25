@@ -22,10 +22,12 @@ export async function researcher(
   messages: ExperimentalMessage[],
   useSpecificModel?: boolean
 ) {
+  console.log('BEFORE INPUT')
   const userInput =
     JSON.parse(
       typeof messages?.[0]?.content === 'string' ? messages?.[0]?.content : '{}'
     )?.input || ''
+  console.log('AFTER INPUT')
 
   const openai = new OpenAI({
     baseUrl: process.env.OPENAI_API_BASE, // optional base URL for proxies etc.
@@ -43,19 +45,22 @@ export async function researcher(
     </Section>
   )
   const { products: allProducts } = await shopifyProduct(userInput, 20)
+  console.log('AFTER FETCH PRODUCTS')
+
   // As a professional search expert, you possess the ability to search for any information on the web.
   // For each user query, utilize the search results to their fullest potential to provide additional information and assistance in your response.
   //Aim to directly address the user's question, augmenting your response with insights gleaned from the search results.
   const allShopifyProducts =
     allProducts?.edges
       ?.map((x: any) => ({
-        productTitle: x.node.title,
-        onlineStoreUrl: x.node.onlineStoreUrl,
-        productImage: x.node.featuredImage?.url,
-        productPrice: x.node.priceRangeV2?.minVariantPrice?.amount,
-        productDescription: x.node.description
+        productTitle: x.node?.title,
+        onlineStoreUrl: x.node?.onlineStoreUrl,
+        productImage: x.node?.featuredImage?.url,
+        productPrice: x.node?.priceRangeV2?.minVariantPrice?.amount,
+        productDescription: x.node?.description
       }))
       .filter((x: any) => x?.onlineStoreUrl?.length) || []
+  console.log('AFTER  PRODUCTS ITERATION')
 
   const result = await experimental_streamText({
     model: openai.chat(process.env.OPENAI_API_MODEL || 'gpt-4-turbo'),
