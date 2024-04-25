@@ -22,6 +22,11 @@ export async function researcher(
   messages: ExperimentalMessage[],
   useSpecificModel?: boolean
 ) {
+  const userInput =
+    JSON.parse(
+      typeof messages?.[0]?.content === 'string' ? messages[0].content : '{}'
+    )?.input || ''
+
   const openai = new OpenAI({
     baseUrl: process.env.OPENAI_API_BASE, // optional base URL for proxies etc.
     apiKey: process.env.OPENAI_API_KEY, // optional API key, default to env property OPENAI_API_KEY
@@ -37,25 +42,31 @@ export async function researcher(
       <BotMessage content={streamText.value} />
     </Section>
   )
-  const { products: allProducts } = await shopifyProduct('', 250)
-
+  const { products: allProducts } = await shopifyProduct(userInput, 20)
+  // As a professional search expert, you possess the ability to search for any information on the web.
+  // For each user query, utilize the search results to their fullest potential to provide additional information and assistance in your response.
+  //Aim to directly address the user's question, augmenting your response with insights gleaned from the search results.
   const allShopifyProducts =
     allProducts?.edges
-      ?.map((x: any) => x.node)
+      ?.map((x: any) => ({
+        productTitle: x.node.title,
+        onlineStoreUrl: x.node.onlineStoreUrl,
+        productImage: x.node.featuredImage?.url,
+        productPrice: x.node.priceRangeV2?.minVariantPrice?.amount,
+        productDescription: x.node.description
+      }))
       .filter((x: any) => x.onlineStoreUrl?.length) || []
 
   const result = await experimental_streamText({
     model: openai.chat(process.env.OPENAI_API_MODEL || 'gpt-4-turbo'),
     maxTokens: 2500,
-    system: `As a professional search expert, you possess the ability to search for any information on the web. 
-    For each user query, utilize the search results to their fullest potential to provide additional information and assistance in your response.
+    system: `
+    Act as a store help desk and fulfill the users queries, User will ask questions about the products, Here is your inventory and it is array of hashes: ${allShopifyProducts}
+    On every query look for the product that lies in the users filter from the inventory, if no product lies in the filters, then suggest the similar, relevent products.
     If there are any images relevant to your answer, be sure to include them as well.
-    Aim to directly address the user's question, augmenting your response with insights gleaned from the search results.
     Whenever quoting or referencing information from a specific URL, always cite the source URL explicitly.
     Please match the language of the response to the user's language.
-    
-    I have few products, first check if the user requirements lies with in these products then suggest these products.
-    Products are below: ${allShopifyProducts}`,
+    `,
     messages,
     tools: {
       search: {
@@ -93,10 +104,10 @@ export async function researcher(
               products?.edges
                 ?.map((x: any) => x.node)
                 .filter((x: any) => x.onlineStoreUrl?.length) || []
-            console.log('P'.repeat(1000))
+            // console.log('P'.repeat(1000))
             // console.log(shopifyProducts)
-            console.log(messages)
-            console.log(query)
+            // console.log(messages)
+            // console.log(query)
 
             // searchResult =
             //   searchAPI === 'tavily'
