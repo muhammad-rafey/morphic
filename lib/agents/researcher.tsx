@@ -233,17 +233,18 @@ export async function researcher(
 // }
 
 async function shopifyProduct(search: string, limit: number = 10) {
-  let searchString = 'query:"status:active"'
-  if (search.length)
-    searchString = `query:"(${search
-      .toLowerCase()
-      ?.replace('tv', 'lcd led')
-      ?.split(' ')
-      ?.map(x => `title:${toSingular(x)}*`)
-      ?.join(' OR ')}) AND status:active"`
+  try {
+    let searchString = 'query:"status:active"'
+    if (search.length)
+      searchString = `query:"(${search
+        .toLowerCase()
+        ?.replace('tv', 'lcd led')
+        ?.split(' ')
+        ?.map(x => `title:${toSingular(x)}*`)
+        ?.join(' OR ')}) AND status:active"`
 
-  console.log('query ==>>>>>>', searchString)
-  const query = `
+    console.log('query ==>>>>>>', searchString)
+    const query = `
   {
     products(first: ${limit}, ${searchString} ) {
       edges {
@@ -267,42 +268,46 @@ async function shopifyProduct(search: string, limit: number = 10) {
   }
   `
 
-  function toSingular(word: string) {
-    word = word.toLowerCase()
-    const rules = [
-      { regex: /ies$/, replacement: 'y' },
-      { regex: /s$/, replacement: '' }
-    ]
-    for (let rule of rules) {
-      if (rule.regex.test(word)) {
-        return word.replace(rule.regex, rule.replacement)
+    const headers = new Headers()
+    headers.append(
+      'X-Shopify-Access-Token',
+      process.env.SHOPIFY_API_ACCESS_TOKEN || ''
+    )
+    headers.append('Content-Type', 'application/json')
+
+    const response = await fetch(
+      `https://${process.env.SHOP_NAME}.myshopify.com/admin/api/2024-04/graphql.json`,
+      {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ query })
       }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`)
     }
-    return word
+
+    const { data } = await response.json()
+    return data
+  } catch (e) {
+    console.log('error=>>>')
+    console.log(e)
   }
+}
 
-  const headers = new Headers()
-  headers.append(
-    'X-Shopify-Access-Token',
-    process.env.SHOPIFY_API_ACCESS_TOKEN || ''
-  )
-  headers.append('Content-Type', 'application/json')
-
-  const response = await fetch(
-    `https://${process.env.SHOP_NAME}.myshopify.com/admin/api/2024-04/graphql.json`,
-    {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({ query })
+function toSingular(word: string) {
+  word = word.toLowerCase()
+  const rules = [
+    { regex: /ies$/, replacement: 'y' },
+    { regex: /s$/, replacement: '' }
+  ]
+  for (let rule of rules) {
+    if (rule.regex.test(word)) {
+      return word.replace(rule.regex, rule.replacement)
     }
-  )
-
-  if (!response.ok) {
-    throw new Error(`Error: ${response.status}`)
   }
-
-  const { data } = await response.json()
-  return data
+  return word
 }
 
 async function exaSearch(query: string, maxResults: number = 10): Promise<any> {
