@@ -23,7 +23,7 @@ export async function researcher(
   useSpecificModel?: boolean
 ) {
   console.log('BEFORE INPUT')
-  // const userInput = messages?.[0]?.content || ''
+  const userInput = messages?.[0]?.content || ''
   console.log('AFTER INPUT')
 
   const openai = new OpenAI({
@@ -41,29 +41,32 @@ export async function researcher(
       <BotMessage content={streamText.value} />
     </Section>
   )
-  const { products: allProducts } = await shopifyProduct('', 20)
+  const { products: allProducts } = await shopifyProduct(
+    typeof userInput === 'string' ? userInput : "'",
+    20
+  )
   console.log('AFTER FETCH PRODUCTS')
 
   // As a professional search expert, you possess the ability to search for any information on the web.
   // For each user query, utilize the search results to their fullest potential to provide additional information and assistance in your response.
   //Aim to directly address the user's question, augmenting your response with insights gleaned from the search results.
-  const allShopifyProducts =
-    allProducts?.edges
-      ?.map((x: any) => ({
-        productTitle: x.node?.title,
-        onlineStoreUrl: x.node?.onlineStoreUrl,
-        productImage: x.node?.featuredImage?.url,
-        productPrice: x.node?.priceRangeV2?.minVariantPrice?.amount,
-        productDescription: x.node?.description
-      }))
-      .filter((x: any) => x?.onlineStoreUrl?.length) || []
-  console.log('AFTER  PRODUCTS ITERATION')
+  // const allShopifyProducts =
+  //   allProducts?.edges
+  //     ?.map((x: any) => ({
+  //       productTitle: x.node?.title,
+  //       onlineStoreUrl: x.node?.onlineStoreUrl,
+  //       productImage: x.node?.featuredImage?.url,
+  //       productPrice: x.node?.priceRangeV2?.minVariantPrice?.amount,
+  //       productDescription: x.node?.description
+  //     }))
+  //     .filter((x: any) => x?.onlineStoreUrl?.length) || []
+  // console.log('AFTER  PRODUCTS ITERATION')
 
   const result = await experimental_streamText({
     model: openai.chat(process.env.OPENAI_API_MODEL || 'gpt-4-turbo'),
     maxTokens: 2500,
     system: `
-    Act as a store help desk and fulfill the users queries, User will ask questions about the products, Here is your inventory and it is array of hashes: ${allShopifyProducts}
+    Act as a store help desk and fulfill the users queries, User will ask questions about the products, Here is your inventory and it is array of hashes: ${allProducts}
     On every query look for the product that lies in the users filter from the inventory, if no product lies in the filters, then suggest the similar, relevent products.
     If there are any images relevant to your answer, be sure to include them as well.
     Whenever quoting or referencing information from a specific URL, always cite the source URL explicitly.
