@@ -78,16 +78,21 @@ async function submit(formData?: FormData, skip?: boolean) {
         ? toolOutputs.length === 0 && answer.length === 0
         : answer.length === 0
     ) {
-      // Search the web and generate the answer
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        uiStream,
-        streamText,
-        messages,
-        useSpecificAPI
-      )
-      answer = fullResponse
-      toolOutputs = toolResponses
-      errorOccurred = hasError
+      try {
+        // Search the web and generate the answer
+        const { fullResponse, hasError, toolResponses } = await researcher(
+          uiStream,
+          streamText,
+          messages,
+          useSpecificAPI
+        )
+        answer = fullResponse
+        toolOutputs = toolResponses
+        errorOccurred = hasError
+      } catch (e) {
+        console.log('T'.repeat(1000))
+        console.log(e)
+      }
     }
 
     // If useSpecificAPI is enabled, generate the answer using the specific model
