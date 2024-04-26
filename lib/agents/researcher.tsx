@@ -23,10 +23,7 @@ export async function researcher(
   useSpecificModel?: boolean
 ) {
   console.log('BEFORE INPUT')
-  const userInput =
-    JSON.parse(
-      typeof messages?.[0]?.content === 'string' ? messages?.[0]?.content : '{}'
-    )?.input || ''
+  const userInput = messages?.[0]?.content || ''
   console.log('AFTER INPUT')
 
   const openai = new OpenAI({
@@ -44,7 +41,10 @@ export async function researcher(
       <BotMessage content={streamText.value} />
     </Section>
   )
-  const { products: allProducts } = await shopifyProduct(userInput, 20)
+  const { products: allProducts } = await shopifyProduct(
+    typeof userInput === 'string' ? userInput : '',
+    20
+  )
   console.log('AFTER FETCH PRODUCTS')
 
   // As a professional search expert, you possess the ability to search for any information on the web.
